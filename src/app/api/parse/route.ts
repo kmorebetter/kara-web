@@ -1,5 +1,6 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
+import { PDFParse } from "pdf-parse";
 
 const SYSTEM_PROMPT = `You are a meticulous performer contract data extractor for a Vancouver film production. You receive unstructured deal points (and optionally traveler info from a PDF) and output a single JSON object — nothing else.
 
@@ -154,30 +155,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Build the user message content
-  const content: OpenAI.Chat.Completions.ChatCompletionContentPart[] = [];
-
-  // Add each uploaded PDF
+  // Extract text from uploaded PDFs server-side for reliable parsing
+  const pdfTexts: string[] = [];
   for (const file of uploadedFiles) {
     const buffer = await file.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
-    content.push({
-      type: "file",
-      file: {
-        filename: file.name,
-        file_data: `data:application/pdf;base64,${base64}`,
-      },
-    });
-    content.push({
-      type: "text",
-      text: `Above is "${file.name}". Extract any relevant performer details from it.\n\n`,
-    });
+    try {
+      const pdf = new PDFParse({ data: new Uint8Array(buffer) });
+      const result = await pdf.getText();
+      const text = result.text?.trim();
+      if (text) {
+        pdfTexts.push(`--- Contents of "${file.name}" ---\n${text}\n--- End of "${file.name}" ---`);
+      }
+      await pdf.destroy();
+    } catch {
+      // If PDF parsing fails, skip this file
+    }
   }
 
-  content.push({
-    type: "text",
-    text: `Here are the deal points:\n\n${dealPoints}`,
-  });
+  // Build the user message as plain text (more reliable than binary file content)
+  let userMessage = "";
+  if (pdfTexts.length > 0) {
+    userMessage += "UPLOADED DOCUMENTS (extract all performer details from these):\n\n";
+    userMessage += pdfTexts.join("\n\n");
+    userMessage += "\n\n";
+  }
+  userMessage += `DEAL POINTS:\n\n${dealPoints}`;
 
   try {
     const client = new OpenAI({ apiKey });
@@ -187,7 +189,7 @@ export async function POST(request: NextRequest) {
       max_tokens: 4000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content },
+        { role: "user", content: userMessage },
       ],
     });
 
