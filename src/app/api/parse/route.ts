@@ -1,4 +1,4 @@
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
 import { PDFParse } from "pdf-parse";
 
@@ -136,7 +136,7 @@ If a PDF is provided, extract EVERY detail: full legal name, passport number, ci
 - NEVER truncate or abbreviate the other_contractual field. Include every detail.`;
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       { error: "Server is not configured with an API key." },
@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Build the user message as plain text (more reliable than binary file content)
+  // Build the user message as plain text
   let userMessage = "";
   if (pdfTexts.length > 0) {
     userMessage += "UPLOADED DOCUMENTS (extract all performer details from these):\n\n";
@@ -182,24 +182,24 @@ export async function POST(request: NextRequest) {
   userMessage += `DEAL POINTS:\n\n${dealPoints}`;
 
   try {
-    const client = new OpenAI({ apiKey });
+    const client = new Anthropic({ apiKey });
 
-    const response = await client.chat.completions.create({
-      model: "gpt-4.1",
+    const response = await client.messages.create({
+      model: "claude-sonnet-4-5-20250929",
       max_tokens: 4000,
+      system: SYSTEM_PROMPT,
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userMessage },
       ],
     });
 
-    const text = response.choices[0]?.message?.content;
-    if (!text) {
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
       throw new Error("No text in response");
     }
 
     // Parse the JSON — strip any markdown fences just in case
-    let jsonText = text.trim();
+    let jsonText = textBlock.text.trim();
     if (jsonText.startsWith("```")) {
       jsonText = jsonText.replace(/^```(?:json)?\n?/, "").replace(/\n?```$/, "");
     }
