@@ -1,6 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import pdf from "pdf-parse/lib/pdf-parse.js";
 
 const SYSTEM_PROMPT = `You are a meticulous performer contract data extractor for a Vancouver film production. You receive unstructured deal points (and optionally traveler info from a PDF) and output a single JSON object — nothing else.
 
@@ -155,29 +154,31 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Extract text from uploaded PDFs server-side for reliable parsing
-  const pdfTexts: string[] = [];
+  // Build message content with PDFs sent natively to Claude
+  const content: Anthropic.Messages.ContentBlockParam[] = [];
+
+  // Add each uploaded PDF as a native document block
   for (const file of uploadedFiles) {
-    try {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const result = await pdf(buffer);
-      const text = result.text?.trim();
-      if (text) {
-        pdfTexts.push(`--- Contents of "${file.name}" ---\n${text}\n--- End of "${file.name}" ---`);
-      }
-    } catch {
-      // If PDF parsing fails, skip this file
-    }
+    const buffer = await file.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString("base64");
+    content.push({
+      type: "document",
+      source: {
+        type: "base64",
+        media_type: "application/pdf",
+        data: base64,
+      },
+    });
+    content.push({
+      type: "text",
+      text: `Above is "${file.name}". Extract ALL performer details from every field in this document.\n\n`,
+    });
   }
 
-  // Build the user message as plain text
-  let userMessage = "";
-  if (pdfTexts.length > 0) {
-    userMessage += "UPLOADED DOCUMENTS (extract all performer details from these):\n\n";
-    userMessage += pdfTexts.join("\n\n");
-    userMessage += "\n\n";
-  }
-  userMessage += `DEAL POINTS:\n\n${dealPoints}`;
+  content.push({
+    type: "text",
+    text: `DEAL POINTS:\n\n${dealPoints}`,
+  });
 
   try {
     const client = new Anthropic({ apiKey });
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
       max_tokens: 4000,
       system: SYSTEM_PROMPT,
       messages: [
-        { role: "user", content: userMessage },
+        { role: "user", content },
       ],
     });
 
