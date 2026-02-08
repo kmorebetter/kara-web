@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextRequest, NextResponse } from "next/server";
-import { PDFParse } from "pdf-parse";
+import pdf from "pdf-parse/lib/pdf-parse.js";
 
 const SYSTEM_PROMPT = `You are a meticulous performer contract data extractor for a Vancouver film production. You receive unstructured deal points (and optionally traveler info from a PDF) and output a single JSON object — nothing else.
 
@@ -158,15 +158,13 @@ export async function POST(request: NextRequest) {
   // Extract text from uploaded PDFs server-side for reliable parsing
   const pdfTexts: string[] = [];
   for (const file of uploadedFiles) {
-    const buffer = await file.arrayBuffer();
     try {
-      const pdf = new PDFParse({ data: new Uint8Array(buffer) });
-      const result = await pdf.getText();
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const result = await pdf(buffer);
       const text = result.text?.trim();
       if (text) {
         pdfTexts.push(`--- Contents of "${file.name}" ---\n${text}\n--- End of "${file.name}" ---`);
       }
-      await pdf.destroy();
     } catch {
       // If PDF parsing fails, skip this file
     }
