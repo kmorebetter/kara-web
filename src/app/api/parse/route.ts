@@ -183,7 +183,7 @@ export async function POST(request: NextRequest) {
     const client = new OpenAI({ apiKey });
 
     const response = await client.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       max_tokens: 4000,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
