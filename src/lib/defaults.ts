@@ -48,4 +48,5 @@ export const DEFAULT_CONFIG: ContractConfig = {
     salary_line: "",
   },
   memo_date: new Date().toISOString().split("T")[0],
+  production_title: "EFFIGY",
 };

@@ -12,8 +12,12 @@ export async function generateContract(
 
   let xml = await zip.file("word/document.xml")!.async("string");
 
+  // Production title (& -> &amp; for XML)
+  const prodTitle = config.production_title.replaceAll("&", "&amp;");
+
   // Text swaps — use replaceAll since performer name appears 3 times
   const textSwaps: [string, string][] = [
+    [">EFFIGY<", `>${prodTitle}<`],
     [">Toby Hargrave<", `>${p.name}<`],
     [">Canadian<", `>${p.citizenship}<`],
     [">604-992-2386<", `>${p.phone}<`],

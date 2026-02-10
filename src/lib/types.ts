@@ -52,4 +52,5 @@ export interface ContractConfig {
   agent: AgentInfo;
   deal: DealInfo;
   memo_date: string;
+  production_title: string;
 }

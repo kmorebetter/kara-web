@@ -14,7 +14,11 @@ export async function generateDealMemo(
   // --- Shared Strings ---
   let ss = await zip.file("xl/sharedStrings.xml")!.async("string");
 
+  // Production title (& -> &amp; for XML)
+  const prodTitle = config.production_title.replaceAll("&", "&amp;");
+
   const stringSwaps: [string, string][] = [
+    [">EFFIGY<", `>${prodTitle}<`],
     [">Toby Hargrave<", `>${p.name}<`],
     [">642-110-589<", `>${p.sin}<`],
     [">13748 8268<", `>${p.gst}<`],

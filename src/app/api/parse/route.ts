@@ -58,7 +58,8 @@ Return this exact structure:
     "other_contractual": "",
     "salary_line": ""
   },
-  "memo_date": "YYYY-MM-DD"
+  "memo_date": "YYYY-MM-DD",
+  "production_title": ""
 }
 
 ## Field-by-Field Rules
@@ -131,7 +132,7 @@ If a PDF is provided, extract EVERY detail: full legal name, passport number, ci
 - Output ONLY the JSON object. No markdown, no explanation, no code fences.
 - For anything genuinely not mentioned, use "n/a" for strings or false for booleans.
 - Do not ask questions. Make your best judgment call.
-- The production is EFFIGY, filmed in Vancouver, B.C. — these are baked into the templates and don't need to be in the JSON.
+- production_title: The name of the production/show. Extract from the deal points if mentioned (e.g. "EFFIGY", "ALL'S FAIR IN LOVE & MAHJONG"). If not mentioned, use "EFFIGY" as default.
 - NEVER truncate or abbreviate the other_contractual field. Include every detail.`;
 
 export async function POST(request: NextRequest) {

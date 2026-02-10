@@ -7,6 +7,7 @@ import { DownloadCard } from "./DownloadCard";
 
 export function ContractForm() {
   const [dealPoints, setDealPoints] = useState("");
+  const [productionTitle, setProductionTitle] = useState("EFFIGY");
   const [files, setFiles] = useState<File[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -41,6 +42,8 @@ export function ContractForm() {
       }
 
       const config: ContractConfig = await res.json();
+      // Use the production title from the input field (overrides whatever the parser returned)
+      config.production_title = productionTitle || config.production_title || "EFFIGY";
       setParsedConfig(config);
       await generate(config);
     } catch (e) {
@@ -60,6 +63,20 @@ export function ContractForm() {
         <p className="text-sm text-zinc-500">
           Paste the deal points below. The deal memo and contract will be generated automatically.
         </p>
+      </div>
+
+      {/* Production Title */}
+      <div>
+        <label className="block text-sm font-medium text-zinc-700 mb-2">
+          Production Title
+        </label>
+        <input
+          type="text"
+          value={productionTitle}
+          onChange={(e) => setProductionTitle(e.target.value)}
+          placeholder="e.g. EFFIGY"
+          className="w-full px-4 py-2 text-sm border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900 font-mono uppercase"
+        />
       </div>
 
       {/* Deal Points Input */}
