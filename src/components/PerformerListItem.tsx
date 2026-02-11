@@ -1,6 +1,9 @@
 "use client";
 
 import { PerformerEntry } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Check, X, AlertCircle } from "lucide-react";
 
 interface PerformerListItemProps {
   entry: PerformerEntry;
@@ -10,53 +13,39 @@ interface PerformerListItemProps {
 export function PerformerListItem({ entry, onRemove }: PerformerListItemProps) {
   if (entry.status === "error") {
     return (
-      <li className="flex items-center justify-between px-4 py-3 border border-red-200 rounded-lg bg-red-50">
-        <div className="min-w-0">
-          <p className="text-sm text-red-700 truncate">
-            Failed to process performer
-          </p>
-          <p className="text-xs text-red-500 truncate">{entry.error}</p>
+      <li className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <AlertCircle className="h-4 w-4 text-destructive shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-destructive truncate">
+              Failed to process
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {entry.error}
+            </p>
+          </div>
         </div>
-        <button
+        <Button
+          variant="ghost"
+          size="icon-xs"
           onClick={() => onRemove(entry.id)}
-          className="ml-3 shrink-0 text-red-400 hover:text-red-600 text-xs"
+          className="shrink-0 text-muted-foreground hover:text-destructive"
         >
-          remove
-        </button>
+          <X className="h-3.5 w-3.5" />
+        </Button>
       </li>
     );
   }
 
   if (entry.status === "parsing" || entry.status === "generating") {
     return (
-      <li className="flex items-center justify-between px-4 py-3 border border-zinc-200 rounded-lg bg-zinc-50">
-        <div className="flex items-center gap-2 min-w-0">
-          <svg
-            className="animate-spin h-4 w-4 text-zinc-400 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-          >
-            <circle
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="3"
-              className="opacity-25"
-            />
-            <path
-              d="M4 12a8 8 0 018-8"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-            />
-          </svg>
-          <p className="text-sm text-zinc-500 truncate">
-            {entry.status === "parsing"
-              ? "Parsing deal points..."
-              : "Generating documents..."}
-          </p>
-        </div>
+      <li className="flex items-center gap-3 rounded-lg border px-4 py-3">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground shrink-0" />
+        <p className="text-sm text-muted-foreground truncate">
+          {entry.status === "parsing"
+            ? "Parsing deal points..."
+            : "Generating documents..."}
+        </p>
       </li>
     );
   }
@@ -66,32 +55,24 @@ export function PerformerListItem({ entry, onRemove }: PerformerListItemProps) {
   const role = entry.config?.deal.role ?? "";
 
   return (
-    <li className="flex items-center justify-between px-4 py-3 border border-zinc-200 rounded-lg bg-zinc-50">
-      <div className="flex items-center gap-2 min-w-0">
-        <svg
-          className="h-4 w-4 text-emerald-500 shrink-0"
-          viewBox="0 0 20 20"
-          fill="currentColor"
-        >
-          <path
-            fillRule="evenodd"
-            d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-            clipRule="evenodd"
-          />
-        </svg>
-        <p className="text-sm text-zinc-900 truncate">
-          {name}
-          {role && (
-            <span className="text-zinc-400"> — {role}</span>
-          )}
-        </p>
+    <li className="flex items-center justify-between gap-3 rounded-lg border px-4 py-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+        <span className="text-sm font-medium truncate">{name}</span>
+        {role && (
+          <Badge variant="secondary" className="shrink-0 font-normal">
+            {role}
+          </Badge>
+        )}
       </div>
-      <button
+      <Button
+        variant="ghost"
+        size="icon-xs"
         onClick={() => onRemove(entry.id)}
-        className="ml-3 shrink-0 text-zinc-400 hover:text-zinc-600 text-xs"
+        className="shrink-0 text-muted-foreground hover:text-foreground"
       >
-        remove
-      </button>
+        <X className="h-3.5 w-3.5" />
+      </Button>
     </li>
   );
 }
