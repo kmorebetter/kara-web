@@ -54,3 +54,16 @@ export interface ContractConfig {
   memo_date: string;
   production_title: string;
 }
+
+export interface GeneratedFiles {
+  dealMemo: { blob: Blob; filename: string };
+  contract: { blob: Blob; filename: string };
+}
+
+export interface PerformerEntry {
+  id: string;
+  config: ContractConfig | null;
+  files: GeneratedFiles | null;
+  status: "parsing" | "generating" | "ready" | "error";
+  error: string | null;
+}

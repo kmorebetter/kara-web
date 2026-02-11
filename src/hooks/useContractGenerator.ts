@@ -1,23 +1,15 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { saveAs } from "file-saver";
-import { ContractConfig } from "@/lib/types";
+import { ContractConfig, GeneratedFiles } from "@/lib/types";
 import { generateDealMemo } from "@/lib/generate-deal-memo";
 import { generateContract } from "@/lib/generate-contract";
-
-interface GeneratedFiles {
-  dealMemo: { blob: Blob; filename: string } | null;
-  contract: { blob: Blob; filename: string } | null;
-}
 
 export function useContractGenerator() {
   const dmTemplate = useRef<ArrayBuffer | null>(null);
   const contractTemplate = useRef<ArrayBuffer | null>(null);
   const [templatesLoaded, setTemplatesLoaded] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [results, setResults] = useState<GeneratedFiles | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -29,20 +21,15 @@ export function useContractGenerator() {
         contractTemplate.current = c;
         setTemplatesLoaded(true);
       })
-      .catch(() => setError("Failed to load document templates."));
+      .catch(() => setTemplateError("Failed to load document templates."));
   }, []);
 
-  const generate = useCallback(async (config: ContractConfig) => {
-    if (!dmTemplate.current || !contractTemplate.current) {
-      setError("Templates not loaded yet.");
-      return;
-    }
+  const generate = useCallback(
+    async (config: ContractConfig): Promise<GeneratedFiles> => {
+      if (!dmTemplate.current || !contractTemplate.current) {
+        throw new Error("Templates not loaded yet.");
+      }
 
-    setIsGenerating(true);
-    setError(null);
-    setResults(null);
-
-    try {
       const performerName = config.performer.name.replace(/ /g, "_");
 
       const [dmBlob, cBlob] = await Promise.all([
@@ -50,20 +37,13 @@ export function useContractGenerator() {
         generateContract(contractTemplate.current, config),
       ]);
 
-      setResults({
+      return {
         dealMemo: { blob: dmBlob, filename: `${performerName}_DM.xlsx` },
         contract: { blob: cBlob, filename: `${performerName}_C.docx` },
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Generation failed.");
-    } finally {
-      setIsGenerating(false);
-    }
-  }, []);
+      };
+    },
+    []
+  );
 
-  const download = useCallback((blob: Blob, filename: string) => {
-    saveAs(blob, filename);
-  }, []);
-
-  return { templatesLoaded, isGenerating, results, error, generate, download };
+  return { templatesLoaded, templateError, generate };
 }

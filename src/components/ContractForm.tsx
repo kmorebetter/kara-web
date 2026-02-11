@@ -1,33 +1,53 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { ContractConfig } from "@/lib/types";
+import { useState, useRef, useCallback } from "react";
+import JSZip from "jszip";
+import { saveAs } from "file-saver";
+import { ContractConfig, PerformerEntry } from "@/lib/types";
 import { useContractGenerator } from "@/hooks/useContractGenerator";
-import { DownloadCard } from "./DownloadCard";
+import { PerformerListItem } from "./PerformerListItem";
 
 export function ContractForm() {
   const [dealPoints, setDealPoints] = useState("");
   const [productionTitle, setProductionTitle] = useState("EFFIGY");
   const [files, setFiles] = useState<File[]>([]);
-  const [isParsing, setIsParsing] = useState(false);
-  const [parseError, setParseError] = useState<string | null>(null);
-  const [parsedConfig, setParsedConfig] = useState<ContractConfig | null>(null);
+  const [performers, setPerformers] = useState<PerformerEntry[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { templatesLoaded, isGenerating, results, error, generate, download } =
-    useContractGenerator();
+  const { templatesLoaded, templateError, generate } = useContractGenerator();
 
-  const handleGenerate = async () => {
+  const updateEntry = useCallback(
+    (id: string, updates: Partial<PerformerEntry>) => {
+      setPerformers((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, ...updates } : p))
+      );
+    },
+    []
+  );
+
+  const handleAddPerformer = async () => {
     if (!dealPoints.trim()) return;
 
-    setIsParsing(true);
-    setParseError(null);
-    setParsedConfig(null);
+    const entryId = Date.now().toString();
+    const currentDealPoints = dealPoints;
+    const currentFiles = files;
+    const currentTitle = productionTitle;
+
+    // Add pending entry and clear input immediately
+    setPerformers((prev) => [
+      ...prev,
+      { id: entryId, config: null, files: null, status: "parsing", error: null },
+    ]);
+    setDealPoints("");
+    setFiles([]);
+    setIsAdding(true);
 
     try {
+      // 1. Parse
       const formData = new FormData();
-      formData.append("dealPoints", dealPoints);
-      for (const file of files) {
+      formData.append("dealPoints", currentDealPoints);
+      for (const file of currentFiles) {
         formData.append("files", file);
       }
 
@@ -42,18 +62,47 @@ export function ContractForm() {
       }
 
       const config: ContractConfig = await res.json();
-      // Use the production title from the input field (overrides whatever the parser returned)
-      config.production_title = productionTitle || config.production_title || "EFFIGY";
-      setParsedConfig(config);
-      await generate(config);
+      config.production_title = currentTitle || config.production_title || "EFFIGY";
+
+      updateEntry(entryId, { config, status: "generating" });
+
+      // 2. Generate
+      const generatedFiles = await generate(config);
+
+      updateEntry(entryId, { files: generatedFiles, status: "ready" });
     } catch (e) {
-      setParseError(e instanceof Error ? e.message : "Something went wrong.");
+      updateEntry(entryId, {
+        status: "error",
+        error: e instanceof Error ? e.message : "Something went wrong.",
+      });
     } finally {
-      setIsParsing(false);
+      setIsAdding(false);
     }
   };
 
-  const busy = isParsing || isGenerating;
+  const handleRemove = useCallback((id: string) => {
+    setPerformers((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const readyPerformers = performers.filter((p) => p.status === "ready");
+
+  const handleDownloadAll = async () => {
+    if (readyPerformers.length === 0) return;
+
+    const zip = new JSZip();
+
+    for (const performer of readyPerformers) {
+      if (performer.files) {
+        zip.file(performer.files.dealMemo.filename, performer.files.dealMemo.blob);
+        zip.file(performer.files.contract.filename, performer.files.contract.blob);
+      }
+    }
+
+    const title = productionTitle.replace(/[^a-zA-Z0-9]/g, "_");
+    const date = new Date().toISOString().split("T")[0];
+    const blob = await zip.generateAsync({ type: "blob" });
+    saveAs(blob, `${title}_Contracts_${date}.zip`);
+  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -61,7 +110,8 @@ export function ContractForm() {
       <div>
         <h1 className="text-2xl font-bold text-zinc-900">Kara</h1>
         <p className="text-sm text-zinc-500">
-          Paste the deal points below. The deal memo and contract will be generated automatically.
+          Set the production title, then add performers one at a time. Download
+          all documents as a ZIP when you&apos;re done.
         </p>
       </div>
 
@@ -97,7 +147,9 @@ export function ContractForm() {
       <div>
         <label className="block text-sm font-medium text-zinc-700 mb-2">
           Supporting Documents{" "}
-          <span className="font-normal text-zinc-400">(optional — traveler info, deal memos, etc.)</span>
+          <span className="font-normal text-zinc-400">
+            (optional — traveler info, deal memos, etc.)
+          </span>
         </label>
         <div className="flex items-center gap-3">
           <button
@@ -123,11 +175,16 @@ export function ContractForm() {
         {files.length > 0 && (
           <ul className="mt-2 space-y-1">
             {files.map((file, i) => (
-              <li key={`${file.name}-${i}`} className="flex items-center gap-2 text-sm text-zinc-600">
+              <li
+                key={`${file.name}-${i}`}
+                className="flex items-center gap-2 text-sm text-zinc-600"
+              >
                 <span>{file.name}</span>
                 <button
                   type="button"
-                  onClick={() => setFiles((prev) => prev.filter((_, j) => j !== i))}
+                  onClick={() =>
+                    setFiles((prev) => prev.filter((_, j) => j !== i))
+                  }
                   className="text-zinc-400 hover:text-zinc-600 text-xs"
                 >
                   remove
@@ -137,57 +194,61 @@ export function ContractForm() {
           </ul>
         )}
         <p className="text-xs text-zinc-400 mt-1">
-          Details like passport, DOB, address, etc. will be extracted automatically from any uploaded PDFs.
+          Details like passport, DOB, address, etc. will be extracted
+          automatically from any uploaded PDFs.
         </p>
       </div>
 
-      {/* Generate Button */}
+      {/* Add Performer Button */}
       <button
-        onClick={handleGenerate}
-        disabled={busy || !templatesLoaded || !dealPoints.trim()}
+        onClick={handleAddPerformer}
+        disabled={isAdding || !templatesLoaded || !dealPoints.trim()}
         className="w-full py-3 text-sm font-medium bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 disabled:bg-zinc-300 disabled:cursor-not-allowed transition-colors"
       >
         {!templatesLoaded
           ? "Loading templates..."
-          : isParsing
-          ? "Parsing deal points..."
-          : isGenerating
-          ? "Generating documents..."
-          : "Generate Documents"}
+          : isAdding
+          ? "Adding performer..."
+          : "Add Performer"}
       </button>
 
-      {/* Errors */}
-      {(parseError || error) && (
+      {/* Template Error */}
+      {templateError && (
         <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-          {parseError || error}
+          {templateError}
         </div>
       )}
 
-      {/* Results */}
-      {results && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-zinc-900">
-            Documents for {parsedConfig?.performer.name}
+      {/* Performer List */}
+      {performers.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-zinc-900 mb-3">
+            Performers ({readyPerformers.length}
+            {readyPerformers.length !== performers.length &&
+              ` of ${performers.length}`}
+            )
           </h2>
-          {results.dealMemo && (
-            <DownloadCard
-              label="Deal Memo"
-              filename={results.dealMemo.filename}
-              onDownload={() =>
-                download(results.dealMemo!.blob, results.dealMemo!.filename)
-              }
-            />
-          )}
-          {results.contract && (
-            <DownloadCard
-              label="UBCP Contract"
-              filename={results.contract.filename}
-              onDownload={() =>
-                download(results.contract!.blob, results.contract!.filename)
-              }
-            />
-          )}
+          <ul className="space-y-2 max-h-96 overflow-y-auto">
+            {performers.map((entry) => (
+              <PerformerListItem
+                key={entry.id}
+                entry={entry}
+                onRemove={handleRemove}
+              />
+            ))}
+          </ul>
         </div>
+      )}
+
+      {/* Download All */}
+      {readyPerformers.length > 0 && (
+        <button
+          onClick={handleDownloadAll}
+          className="w-full py-3 text-sm font-medium bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+        >
+          Download All ({readyPerformers.length} performer
+          {readyPerformers.length !== 1 ? "s" : ""})
+        </button>
       )}
     </div>
   );
