@@ -1,5 +1,6 @@
 import JSZip from "jszip";
 import { ContractConfig } from "./types";
+import { escapeXml } from "./utils";
 
 export async function generateContract(
   templateBytes: ArrayBuffer,
@@ -13,24 +14,21 @@ export async function generateContract(
 
   let xml = await zip.file("word/document.xml")!.async("string");
 
-  // Production title (& -> &amp; for XML)
-  const prodTitle = config.production_title.replaceAll("&", "&amp;");
-
   // Text swaps — use replaceAll since performer name appears 3 times
   const textSwaps: [string, string][] = [
-    [">EFFIGY<", `>${prodTitle}<`],
-    [">Toby Hargrave<", `>${p.name}<`],
-    [">Canadian<", `>${p.citizenship}<`],
-    [">604-992-2386<", `>${p.phone}<`],
-    [">11525<", `>${p.ubcp_number}<`],
-    [">642-110-589<", `>${p.sin}<`],
-    [">HART1429<", `>${p.cavco}<`],
-    [">13748 8268<", `>${p.gst}<`],
-    [">Roxanne Kinsman<", `>${a.name}<`],
-    [">roxanne@nuancemgmt.com (cc: eva@nuancemgmt.com)<", `>${a.email}<`],
-    [">778-323-1252<", `>${agentPhone}<`],
-    [">At Producer Discretion<", `>${d.credit}<`],
-    [">Performer to Self Drive<", `>${d.transportation}<`],
+    [">EFFIGY<", `>${escapeXml(config.production_title)}<`],
+    [">Toby Hargrave<", `>${escapeXml(p.name)}<`],
+    [">Canadian<", `>${escapeXml(p.citizenship)}<`],
+    [">604-992-2386<", `>${escapeXml(p.phone)}<`],
+    [">11525<", `>${escapeXml(p.ubcp_number)}<`],
+    [">642-110-589<", `>${escapeXml(p.sin)}<`],
+    [">HART1429<", `>${escapeXml(p.cavco)}<`],
+    [">13748 8268<", `>${escapeXml(p.gst)}<`],
+    [">Roxanne Kinsman<", `>${escapeXml(a.name)}<`],
+    [">roxanne@nuancemgmt.com (cc: eva@nuancemgmt.com)<", `>${escapeXml(a.email)}<`],
+    [">778-323-1252<", `>${escapeXml(agentPhone)}<`],
+    [">At Producer Discretion<", `>${escapeXml(d.credit)}<`],
+    [">Performer to Self Drive<", `>${escapeXml(d.transportation)}<`],
   ];
 
   for (const [old, replacement] of textSwaps) {
@@ -40,39 +38,39 @@ export async function generateContract(
   // Address (has xml:space="preserve" and trailing space)
   xml = xml.replaceAll(
     "c/o Nuance Talent Management, #102 2556 Highbury St, Vancouver, BC ",
-    p.address
+    escapeXml(p.address)
   );
 
   // Postal code
-  xml = xml.replaceAll(" V6R 3T3", ` ${p.postal_code}`);
+  xml = xml.replaceAll(" V6R 3T3", ` ${escapeXml(p.postal_code)}`);
 
   // Role
-  xml = xml.replaceAll(">#6 BIG MIKE<", `>${d.role}<`);
+  xml = xml.replaceAll(">#6 BIG MIKE<", `>${escapeXml(d.role)}<`);
 
-  // Guaranteed dates (& -> &amp; in XML)
+  // Guaranteed dates
   xml = xml.replaceAll(
     ">July 7, 8 &amp; 14, 2025<",
-    `>${d.guaranteed_dates.replaceAll("&", "&amp;")}<`
+    `>${escapeXml(d.guaranteed_dates)}<`
   );
 
   // Daily rate
-  xml = xml.replaceAll(">1500.00<", `>${d.daily_rate}<`);
+  xml = xml.replaceAll(">1500.00<", `>${escapeXml(d.daily_rate)}<`);
 
   // Hourly / OT rates
-  xml = xml.replaceAll(">114.71<", `>${d.hourly_rate}<`);
-  xml = xml.replaceAll(">172.07<", `>${d.ot_15x}<`);
-  xml = xml.replaceAll(">229.42<", `>${d.ot_20x}<`);
+  xml = xml.replaceAll(">114.71<", `>${escapeXml(d.hourly_rate)}<`);
+  xml = xml.replaceAll(">172.07<", `>${escapeXml(d.ot_15x)}<`);
+  xml = xml.replaceAll(">229.42<", `>${escapeXml(d.ot_20x)}<`);
 
   // Location
   xml = xml.replaceAll(
     " Fraserwood Studios, 22031 Fraserwood Way, Richmond BC V6W 1J5 ",
-    ` ${d.location} `
+    ` ${escapeXml(d.location)} `
   );
 
   // Other Contractual Obligations (two-part replacement)
   xml = xml.replaceAll(
     "Dressing Facility: Triple Banger. Send Contract to Agent for signature.",
-    d.other_contractual
+    escapeXml(d.other_contractual)
   );
   xml = xml.replaceAll(
     "All additional fees to be paid at Principal Scale. Cheques payable to " +
@@ -87,7 +85,7 @@ export async function generateContract(
   if (bookmarkPos > 0) {
     const naPos = xml.indexOf(">n/a<", bookmarkPos);
     if (naPos > 0) {
-      xml = xml.substring(0, naPos) + `>${p.dob}<` + xml.substring(naPos + 5);
+      xml = xml.substring(0, naPos) + `>${escapeXml(p.dob)}<` + xml.substring(naPos + 5);
     }
   }
 

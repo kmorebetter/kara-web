@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import { ContractConfig } from "./types";
 import { excelSerialDate } from "./excel-date";
+import { escapeXml } from "./utils";
 
 export async function generateDealMemo(
   templateBytes: ArrayBuffer,
@@ -15,26 +16,23 @@ export async function generateDealMemo(
   // --- Shared Strings ---
   let ss = await zip.file("xl/sharedStrings.xml")!.async("string");
 
-  // Production title (& -> &amp; for XML)
-  const prodTitle = config.production_title.replaceAll("&", "&amp;");
-
   const stringSwaps: [string, string][] = [
-    [">EFFIGY<", `>${prodTitle}<`],
-    [">Toby Hargrave<", `>${p.name}<`],
-    [">642-110-589<", `>${p.sin}<`],
-    [">13748 8268<", `>${p.gst}<`],
-    [">604-992-2386<", `>${p.phone}<`],
-    [">seetobylive@gmail.com<", `>${p.email}<`],
-    [">Roxanne Kinsman<", `>${a.name}<`],
-    [">Nuance Talent Management<", `>${a.agency}<`],
-    [">#102 2556 Highbury St<", a.agency_address_line1 ? `>${a.agency_address_line1}<` : "><"],
-    [">Vancouver, BC V6R 3T3<", a.agency_address_line2 ? `>${a.agency_address_line2}<` : "><"],
-    [">778-323-1252<", `>${agentPhone}<`],
-    [">roxanne@nuancemgmt.com (cc: eva@nuancemgmt.com)<", `>${a.email}<`],
-    [">BIG MIKE<", `>${d.role}<`],
-    [">#6<", `>${d.role_number}<`],
-    [">July 7 - August 14, 2025<", `>${d.outside_dates}<`],
-    [">Triple Banger<", `>${d.dressing_facility}<`],
+    [">EFFIGY<", `>${escapeXml(config.production_title)}<`],
+    [">Toby Hargrave<", `>${escapeXml(p.name)}<`],
+    [">642-110-589<", `>${escapeXml(p.sin)}<`],
+    [">13748 8268<", `>${escapeXml(p.gst)}<`],
+    [">604-992-2386<", `>${escapeXml(p.phone)}<`],
+    [">seetobylive@gmail.com<", `>${escapeXml(p.email)}<`],
+    [">Roxanne Kinsman<", `>${escapeXml(a.name)}<`],
+    [">Nuance Talent Management<", `>${escapeXml(a.agency)}<`],
+    [">#102 2556 Highbury St<", a.agency_address_line1 ? `>${escapeXml(a.agency_address_line1)}<` : "><"],
+    [">Vancouver, BC V6R 3T3<", a.agency_address_line2 ? `>${escapeXml(a.agency_address_line2)}<` : "><"],
+    [">778-323-1252<", `>${escapeXml(agentPhone)}<`],
+    [">roxanne@nuancemgmt.com (cc: eva@nuancemgmt.com)<", `>${escapeXml(a.email)}<`],
+    [">BIG MIKE<", `>${escapeXml(d.role)}<`],
+    [">#6<", `>${escapeXml(d.role_number)}<`],
+    [">July 7 - August 14, 2025<", `>${escapeXml(d.outside_dates)}<`],
+    [">Triple Banger<", `>${escapeXml(d.dressing_facility)}<`],
   ];
 
   for (const [old, replacement] of stringSwaps) {
@@ -44,11 +42,11 @@ export async function generateDealMemo(
   // Salary line (has leading space + xml:space="preserve")
   ss = ss.replaceAll(
     "> $1500/day +135% (Overtime, wardrobe, read thru, ADR etc. at Principal scale)<",
-    `>${d.salary_line}<`
+    `>${escapeXml(d.salary_line)}<`
   );
 
-  // Day guarantee (& -> &amp; for XML)
-  const guaranteeText = `${d.num_days}, ${d.guaranteed_dates}`.replaceAll("&", "&amp;");
+  // Day guarantee
+  const guaranteeText = escapeXml(`${d.num_days}, ${d.guaranteed_dates}`);
   ss = ss.replaceAll(
     ">One (1) Day, o/a July 7, 8, 14 &amp; 29, 2025<",
     `>${guaranteeText}<`
@@ -65,7 +63,7 @@ export async function generateDealMemo(
     "Toby Hargrave c/o Agent Address. *ALL FIGURES ARE IN CANADIAN DOLLARS*</t></r></si>";
   const newTransport =
     '<si><r><rPr><sz val="10"/><rFont val="Eurostile"/></rPr>' +
-    `<t>${d.other_contractual}</t></r></si>`;
+    `<t>${escapeXml(d.other_contractual)}</t></r></si>`;
   ss = ss.replaceAll(oldTransport, newTransport);
 
   // Add new shared strings (passport, per_diem, address, dob)
@@ -75,7 +73,7 @@ export async function generateDealMemo(
     p.address || "n/a",
     p.dob || "n/a",
   ];
-  const newSiXml = newStrings.map((s) => `<si><t>${s}</t></si>`).join("");
+  const newSiXml = newStrings.map((s) => `<si><t>${escapeXml(s)}</t></si>`).join("");
   ss = ss.replace("</sst>", newSiXml + "</sst>");
 
   // Update counts (original had 107 strings)
