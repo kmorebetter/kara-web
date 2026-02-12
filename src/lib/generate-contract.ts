@@ -9,6 +9,7 @@ export async function generateContract(
   const p = config.performer;
   const a = config.agent;
   const d = config.deal;
+  const agentPhone = a.cell !== "n/a" ? a.cell : a.phone;
 
   let xml = await zip.file("word/document.xml")!.async("string");
 
@@ -27,7 +28,7 @@ export async function generateContract(
     [">13748 8268<", `>${p.gst}<`],
     [">Roxanne Kinsman<", `>${a.name}<`],
     [">roxanne@nuancemgmt.com (cc: eva@nuancemgmt.com)<", `>${a.email}<`],
-    [">778-323-1252<", `>${a.phone}<`],
+    [">778-323-1252<", `>${agentPhone}<`],
     [">At Producer Discretion<", `>${d.credit}<`],
     [">Performer to Self Drive<", `>${d.transportation}<`],
   ];

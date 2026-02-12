@@ -65,13 +65,14 @@ Return this exact structure:
 ## Field-by-Field Rules
 
 ### Rate Fields
-- daily_rate: Numeric with currency, e.g. "3,000.00 USD" or "1,500.00". If "$3K USD", expand to "3,000.00 USD". If "$2500 CAD", format as "2,500.00".
-- hourly_rate / ot_15x / ot_20x: Set to "n/a" unless the deal specifies hourly or overtime rates explicitly.
-- salary_line: This is the FULL descriptive line that appears on the deal memo. It must include the rate, frequency, currency, and what's included. Examples:
+- daily_rate: Usually numeric with currency, e.g. "3,000.00 USD" or "1,500.00". If "$3K USD", expand to "3,000.00 USD". If "$2500 CAD", format as "2,500.00". However, rates can also be SCALE-BASED — e.g. "Principal Scale + 50% Advance", "Scale + 10%", "UBCP Scale", "Double Scale". In these cases, use the scale description as-is (e.g. "Scale + 50%"). Do NOT invent a dollar amount.
+- hourly_rate / ot_15x / ot_20x: Set to "n/a" unless the deal specifies hourly or overtime rates explicitly. For scale-based rates, set all three to "n/a".
+- salary_line: This is the FULL descriptive line that appears on the deal memo. It must include the rate, frequency, and what's included. Examples:
   - "$3,000 USD/Shoot Day (Overtime, wardrobe, read thru, ADR etc. at Principal scale)"
   - "$1,500/day +135% (Overtime, wardrobe, read thru, ADR etc. at Principal scale)"
   - "$2,500 CAD/day (Overtime, wardrobe, read thru, ADR etc. at Principal scale)"
-  Build this from the rate info given. If the deal says "overtime at scale" or "all in", reflect that. Always include "(Overtime, wardrobe, read thru, ADR etc. at Principal scale)" unless the deal specifies different terms.
+  - "Principal Scale + 50% Advance/Shoot Day (Overtime, wardrobe, read thru, ADR etc. at Principal scale)"
+  Build this from the rate info given. For scale-based rates, use the scale description as the rate portion. If the deal says "overtime at scale" or "all in", reflect that. Always include "(Overtime, wardrobe, read thru, ADR etc. at Principal scale)" unless the deal specifies different terms.
 
 ### Date Fields
 - guaranteed_dates: The specific shoot days spelled out. E.g. "February 13 & 15, 2026" or "March 3, 4, 5 & 7, 2026".

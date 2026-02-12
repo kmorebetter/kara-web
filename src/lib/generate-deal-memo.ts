@@ -10,6 +10,7 @@ export async function generateDealMemo(
   const p = config.performer;
   const a = config.agent;
   const d = config.deal;
+  const agentPhone = a.cell !== "n/a" ? a.cell : a.phone;
 
   // --- Shared Strings ---
   let ss = await zip.file("xl/sharedStrings.xml")!.async("string");
@@ -28,7 +29,7 @@ export async function generateDealMemo(
     [">Nuance Talent Management<", `>${a.agency}<`],
     [">#102 2556 Highbury St<", a.agency_address_line1 ? `>${a.agency_address_line1}<` : "><"],
     [">Vancouver, BC V6R 3T3<", a.agency_address_line2 ? `>${a.agency_address_line2}<` : "><"],
-    [">778-323-1252<", `>${a.cell}<`],
+    [">778-323-1252<", `>${agentPhone}<`],
     [">roxanne@nuancemgmt.com (cc: eva@nuancemgmt.com)<", `>${a.email}<`],
     [">BIG MIKE<", `>${d.role}<`],
     [">#6<", `>${d.role_number}<`],
