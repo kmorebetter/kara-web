@@ -35,14 +35,17 @@ export async function generateContract(
     xml = xml.replaceAll(old, replacement);
   }
 
-  // Address (has xml:space="preserve" and trailing space)
+  // Address — split across three XML runs in the template:
+  //   run 1: "c/o"  |  run 2: " "  |  run 3: "Nuance Talent Management, ..."
+  // Clear the old "c/o" prefix; p.address includes its own "c/o" when needed.
+  xml = xml.replaceAll(">c/o<", "><");
   xml = xml.replaceAll(
-    "c/o Nuance Talent Management, #102 2556 Highbury St, Vancouver, BC ",
+    "Nuance Talent Management, #102 2556 Highbury St, Vancouver, BC ",
     escapeXml(p.address)
   );
 
-  // Postal code
-  xml = xml.replaceAll(" V6R 3T3", ` ${escapeXml(p.postal_code)}`);
+  // Postal code (its own XML run)
+  xml = xml.replaceAll(">V6R 3T3<", `>${escapeXml(p.postal_code)}<`);
 
   // Role
   xml = xml.replaceAll(">#6 BIG MIKE<", `>${escapeXml(d.role)}<`);
